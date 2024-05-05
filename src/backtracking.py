@@ -68,7 +68,8 @@ def backtrack(grid, y, x):
 # Driver Code
 if __name__ == "__main__":
     file_name = input('Input grid name: ')
-    grid = read_grid(file_name)
+    grid = read_grid('maps/' + file_name)
+    
     result = copy.deepcopy(grid)
     if grid:
         start = time.time()

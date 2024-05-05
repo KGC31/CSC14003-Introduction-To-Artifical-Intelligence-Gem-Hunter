@@ -1,13 +1,6 @@
 from itertools import combinations
 from pysat.solvers import Solver
 
-# Example grid with clues provided
-grid = [
-    [3, '_', 2, '_'],
-    ['_', '_', 2, '_'],
-    ['_', 3, 1, '_'],
-]
-
 # Assign logical variables to each cell
 logical_vars = {}
 var_counter = 1

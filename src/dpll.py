@@ -1,4 +1,5 @@
 from itertools import combinations
+from utils import read_grid
 
 # Example grid with clues provided
 grid = [
@@ -82,23 +83,27 @@ def dpll(clauses, assignment={}):
 
     return False, None
 
-# Solve using DPLL
-sat, assignment = dpll(cnf_clauses)
-if sat:
-    print("Solution found:", assignment)
-    # Translate the assignment back to the grid representation
-    solution_grid = []
-    for r in range(len(grid)):
-        row_solution = []
-        for c in range(len(grid[0])):
-            if grid[r][c] != '_':
-                row_solution.append(grid[r][c])
-            else:
-                var = logical_vars[(r, c)]
-                row_solution.append('T' if assignment.get(var, False) else 'G')
-        solution_grid.append(row_solution)
-    print("Grid solution:")
-    for row in solution_grid:
-        print(row)
-else:
-    print("No solution could be found.")
+# Driver code
+if __name__ == '__main__':
+    file_name = input('Input grid name: ')
+    grid = read_grid('maps/' + file_name)
+    
+    sat, assignment = dpll(cnf_clauses)
+    if sat:
+        print("Solution found:", assignment)
+        # Translate the assignment back to the grid representation
+        solution_grid = []
+        for r in range(len(grid)):
+            row_solution = []
+            for c in range(len(grid[0])):
+                if grid[r][c] != '_':
+                    row_solution.append(grid[r][c])
+                else:
+                    var = logical_vars[(r, c)]
+                    row_solution.append('T' if assignment.get(var, False) else 'G')
+            solution_grid.append(row_solution)
+        print("Grid solution:")
+        for row in solution_grid:
+            print(row)
+    else:
+        print("No solution could be found.")
