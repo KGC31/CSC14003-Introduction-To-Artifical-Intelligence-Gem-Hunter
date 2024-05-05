@@ -1,13 +1,6 @@
 from itertools import combinations
 from utils import read_grid
 
-# Example grid with clues provided
-grid = [
-    [3, '_', 2, '_'],
-    ['_', '_', 2, '_'],
-    ['_', 3, 1, '_'],
-]
-
 # Assign logical variables to each cell
 logical_vars = {}
 var_counter = 1
@@ -87,7 +80,7 @@ def dpll(clauses, assignment={}):
 if __name__ == '__main__':
     file_name = input('Input grid name: ')
     grid = read_grid('maps/' + file_name)
-    
+
     sat, assignment = dpll(cnf_clauses)
     if sat:
         print("Solution found:", assignment)
