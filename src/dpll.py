@@ -3,11 +3,14 @@ from utils import read_grid
 
 # Assign logical variables to each cell
 logical_vars = {}
-var_counter = 1
-for r in range(len(grid)):
-    for c in range(len(grid[r])):
-        logical_vars[(r, c)] = var_counter
-        var_counter += 1
+
+def count_var(grid):
+    var_counter = 1
+    for r in range(len(grid)):
+        for c in range(len(grid[r])):
+            logical_vars[(r, c)] = var_counter
+            var_counter += 1
+    return var_counter
 
 # Function to find neighboring cells around a given cell
 def find_neighbors(row, col, grid):
@@ -19,23 +22,25 @@ def find_neighbors(row, col, grid):
     return neighbors
 
 # Generate CNF clauses based on the grid clues
-cnf_clauses = []
-for r in range(len(grid)):
-    for c in range(len(grid[r])):
-        if isinstance(grid[r][c], int):  # If the cell contains a numerical clue
-            clue_number = grid[r][c]
-            neighbors = find_neighbors(r, c, grid)
-            neighbor_vars = [logical_vars[neighbor] for neighbor in neighbors]
-            
-            # Generate combinations of neighbors that fulfill the clue's number of traps
-            for combo in combinations(neighbor_vars, clue_number):
-                clause = []
-                for var in neighbor_vars:
-                    if var in combo:
-                        clause.append(var)
-                    else:
-                        clause.append(-var)
-                cnf_clauses.append(clause)
+def generate_cnf_clauses(grid):
+    cnf_clauses = []
+    for r in range(len(grid)):
+        for c in range(len(grid[r])):
+            if isinstance(grid[r][c], int):  # If the cell contains a numerical clue
+                clue_number = grid[r][c]
+                neighbors = find_neighbors(r, c, grid)
+                neighbor_vars = [logical_vars[neighbor] for neighbor in neighbors]
+                
+                # Generate combinations of neighbors that fulfill the clue's number of traps
+                for combo in combinations(neighbor_vars, clue_number):
+                    clause = []
+                    for var in neighbor_vars:
+                        if var in combo:
+                            clause.append(var)
+                        else:
+                            clause.append(-var)
+                    cnf_clauses.append(clause)
+    return cnf_clauses
 
 # DPLL Algorithm
 def dpll(clauses, assignment={}):
@@ -58,7 +63,8 @@ def dpll(clauses, assignment={}):
     # Check if all clauses are satisfied
     if not clauses:
         return True, assignment
-
+    
+    var_counter = count_var(grid)
     # Select the first unassigned variable
     for var in range(1, var_counter):
         if var not in assignment:
@@ -80,6 +86,10 @@ def dpll(clauses, assignment={}):
 if __name__ == '__main__':
     file_name = input('Input grid name: ')
     grid = read_grid('maps/' + file_name)
+
+    count_var(grid)  # Initialize logical variables dictionary
+
+    cnf_clauses = generate_cnf_clauses(grid)
 
     sat, assignment = dpll(cnf_clauses)
     if sat:
