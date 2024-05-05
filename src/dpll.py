@@ -1,8 +1,6 @@
 import copy
 from pysat.formula import CNF
 
-from pysat.solvers import Solver
-
 
 def read_input(filename):
     pattern = []
@@ -18,23 +16,24 @@ def read_input(filename):
     return pattern
 
 
-def find_all_clauses(
-    input_array, input_len, combi_len, indi_tup, ans_index, next_start, clause_tup
-):
-    for iter in range(next_start, input_len + 1):
-        if combi_len <= 0:
-            clause_tup.append(copy.copy(indi_tup))
-            return
-        indi_tup[ans_index] = input_array[iter]
-        find_all_clauses(
-            input_array,
-            input_len,
-            combi_len - 1,
-            indi_tup,
-            ans_index + 1,
-            iter + 1,
-            clause_tup,
-        )
+def find_all_clauses(input_array, input_len, combi_len, indi_tup, ans_index, next_start, clause_tup):
+    if combi_len == 0:  # Chuyển điều kiện kiểm tra này lên trước để tránh truy cập ngoài phạm vi
+        clause_tup.append(copy.copy(indi_tup))
+        return
+
+    for iter in range(next_start, input_len):  # Sửa lại điều kiện lặp để không bao gồm input_len + 1
+        if iter < len(input_array):  # Kiểm tra điều kiện này để đảm bảo không truy cập ngoài phạm vi
+            indi_tup[ans_index] = input_array[iter]
+            find_all_clauses(
+                input_array,
+                input_len,
+                combi_len - 1,
+                indi_tup,
+                ans_index + 1,
+                iter + 1,
+                clause_tup,
+            )
+
 
 
 def find_cell_no(i, j, row, col):
@@ -71,7 +70,6 @@ def generate_cnf(board, row, col):
             if board[i][j] != -1:
                 adj_cells = find_adjacent_cells(board, i, j, row, col)
                 count_adj = len(adj_cells)
-                adj_cells.append(0)  # Why appending 0 here? Seems incorrect and might need removal.
                 indi_tup = [0] * (board[i][j] + 1)
                 first_tup = []
                 find_all_clauses(adj_cells, count_adj, board[i][j] + 1, indi_tup, 0, 0, first_tup)
@@ -82,35 +80,10 @@ def generate_cnf(board, row, col):
                 find_all_clauses(adj_cells, count_adj, count_adj - board[i][j] + 1, indi_tup, 0, 0, second_tup)
                 for tups in second_tup:
                     cnf.append(tups)  # Positive clauses
+    print(cnf)
     return cnf
 
-def execution(board, row, col):
-    cnf = generate_cnf(board, row, col)
-    s = Solver()
-    s.append_formula(cnf.clauses)
-    is_sat = s.solve()
 
-    if is_sat:
-        variable_value = s.get_model()
-        for var in variable_value:
-            if var > 0:
-                i, j = divmod(var - 1, col)
-                if board[i][j] == -1:
-                    board[i][j] = 'T'
-            else:
-                i, j = divmod(-var - 1, col)
-                if board[i][j] == -1:
-                    board[i][j] = 'G'
-        for sublist in board:
-            print(', '.join(map(str, sublist)))
-    else:
-        print("No solution found")
-
-filename = "input.txt"  # Change this to your file path
-board = read_input(filename)
-row = len(board)
-col = len(board[0])
-execution(board, row, col)
 
 def dpll(clauses, assignment):
     if not clauses:
@@ -131,6 +104,7 @@ def dpll(clauses, assignment):
         clauses = [[x for x in c if x != -var] for c in clauses]
         unit_clauses = [c for c in clauses if len(c) == 1]
 
+
     # Choose variable to assign
     for clause in clauses:
         for var in clause:
@@ -140,7 +114,8 @@ def dpll(clauses, assignment):
             continue
         break
     else:
-        return False, None  # No variable found, should not happen
+        return True, assignment  # All variables assigned, solution found
+
 
     # Try true assignment
     solvable, new_assignment = dpll(clauses, assignment | {var})
@@ -161,6 +136,7 @@ def solve_cnf(board, row, col):
             elif var < 0:
                 i, j = divmod(-var - 1, col)
                 board[i][j] = 'G'
+
         print_board(board)
     else:
         print("No solution found")
@@ -169,3 +145,10 @@ def solve_cnf(board, row, col):
 def print_board(board):
     for row in board:
         print(' '.join(str(cell) for cell in row))
+
+filename = "input.txt"  # Change this to your file path
+board = read_input(filename)
+row = len(board)
+col = len(board[0])
+solve_cnf(board, row, col)
+
