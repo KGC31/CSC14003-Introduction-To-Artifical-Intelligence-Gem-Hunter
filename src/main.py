@@ -63,8 +63,9 @@ def pysat_solver(board, row, col):
 
 # Driver code
 if __name__ == '__main__':
-    filename = "map.txt"  # Change this to your file path
-    board = read_input(filename)
+    file_name = input('Input grid name: ')
+
+    board = read_input('maps/' + file_name)
     row = len(board)
     col = len(board[0])
 
