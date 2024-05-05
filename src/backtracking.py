@@ -1,5 +1,5 @@
 import copy
-from utils import read_grid
+from utils import *
 import time
 
 adjacents = [[0, 1], [1, 0], [1, 1], [-1, 0], [0, -1], [-1, -1], [-1, 1], [1, -1]]
@@ -69,13 +69,12 @@ def backtrack(grid, y, x):
 if __name__ == "__main__":
     file_name = input('Input grid name: ')
     grid = read_grid('maps/' + file_name)
-    
+
     result = copy.deepcopy(grid)
     if grid:
         start = time.time()
         if backtrack(grid, 0, 0):
-            for row in result:
-                print(' '.join(map(str, row)))
+            print_grid(result)
         else:
             print("No solution exists.")
         end = time.time()

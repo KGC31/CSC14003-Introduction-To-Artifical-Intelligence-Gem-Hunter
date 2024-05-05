@@ -1,5 +1,6 @@
 from itertools import combinations
-from utils import read_grid
+from utils import *
+import time
 
 # Assign logical variables to each cell
 logical_vars = {}
@@ -91,9 +92,12 @@ if __name__ == '__main__':
 
     cnf_clauses = generate_cnf_clauses(grid)
 
+    start = time.time()
     sat, assignment = dpll(cnf_clauses)
+    end = time.time()
+    
     if sat:
-        print("Solution found:", assignment)
+        # print("Solution found:", assignment)
         # Translate the assignment back to the grid representation
         solution_grid = []
         for r in range(len(grid)):
@@ -105,8 +109,7 @@ if __name__ == '__main__':
                     var = logical_vars[(r, c)]
                     row_solution.append('T' if assignment.get(var, False) else 'G')
             solution_grid.append(row_solution)
-        print("Grid solution:")
-        for row in solution_grid:
-            print(row)
+        print_grid(solution_grid)
+        print("Runtime:", end - start, "seconds")
     else:
         print("No solution could be found.")

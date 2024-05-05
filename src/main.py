@@ -2,6 +2,7 @@ import copy
 import time
 from pysat.formula import CNF
 from pysat.solvers import Solver
+from utils import print_grid
 
 def read_input(filename):
     pattern = []
@@ -56,8 +57,7 @@ def pysat_solver(board, row, col):
             j = (abs(var) - 1) % col
             if board[i][j] == -1:
                 board[i][j] = 'T' if var > 0 else 'G'
-        for sublist in board:
-            print(' '.join(map(str, sublist)))
+        print_grid(board)
     else:
         print("No solution found")
 

@@ -1,5 +1,5 @@
 from itertools import product
-from utils import read_grid
+from utils import *
 import time
 
 adjacents = [[0, 1], [1, 0], [1, 1], [-1, 0], [0, -1], [-1, -1], [-1, 1], [1, -1]]
@@ -50,13 +50,12 @@ def brute_force(grid):
 if __name__ == "__main__":
     file_name = input('Input grid name: ')
     grid = read_grid('maps/' + file_name)
-    
+
     if grid:
         start = time.time()
-        solution = brute_force(grid)
-        if solution:
-            for row in solution:
-                print(' '.join(map(str, row)))
+        result = brute_force(grid)
+        if result:
+            print_grid(result)
         else:
             print("No solution exists.")
         end = time.time()

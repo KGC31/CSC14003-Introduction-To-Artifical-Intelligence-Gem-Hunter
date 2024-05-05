@@ -6,3 +6,7 @@ def read_grid(filename):
     except FileNotFoundError:
         print(f"Error: File '{filename}' not found.")
         return None
+
+def print_grid(grid):
+    for row in grid:
+        print(' '.join(map(str, row)))
