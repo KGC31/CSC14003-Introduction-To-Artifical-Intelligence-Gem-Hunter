@@ -1,112 +1,154 @@
-from itertools import combinations
-from utils import read_grid
+import copy
+from pysat.formula import CNF
 
-# Assign logical variables to each cell
-logical_vars = {}
 
-def count_var(grid):
-    var_counter = 1
-    for r in range(len(grid)):
-        for c in range(len(grid[r])):
-            logical_vars[(r, c)] = var_counter
-            var_counter += 1
-    return var_counter
+def read_input(filename):
+    pattern = []
+    with open(filename, "r") as file:
+        for line in file:
+            row = line.strip().split(",")
+            row = [-1 if x == " _" else x for x in row]
+            row = [-1 if x == "_" else x for x in row]
 
-# Function to find neighboring cells around a given cell
-def find_neighbors(row, col, grid):
-    neighbors = []
-    for r in range(max(0, row - 1), min(len(grid), row + 2)):
-        for c in range(max(0, col - 1), min(len(grid[0]), col + 2)):
-            if (r, c) != (row, col):
-                neighbors.append((r, c))
-    return neighbors
+            pattern.append(row)
+    pattern = [[int(x) for x in row] for row in pattern]
 
-# Generate CNF clauses based on the grid clues
-def generate_cnf_clauses(grid):
-    cnf_clauses = []
-    for r in range(len(grid)):
-        for c in range(len(grid[r])):
-            if isinstance(grid[r][c], int):  # If the cell contains a numerical clue
-                clue_number = grid[r][c]
-                neighbors = find_neighbors(r, c, grid)
-                neighbor_vars = [logical_vars[neighbor] for neighbor in neighbors]
-                
-                # Generate combinations of neighbors that fulfill the clue's number of traps
-                for combo in combinations(neighbor_vars, clue_number):
-                    clause = []
-                    for var in neighbor_vars:
-                        if var in combo:
-                            clause.append(var)
-                        else:
-                            clause.append(-var)
-                    cnf_clauses.append(clause)
-    return cnf_clauses
+    return pattern
 
-# DPLL Algorithm
-def dpll(clauses, assignment={}):
-    # Simplify clauses and apply unit propagation
+
+def find_all_clauses(input_array, input_len, combi_len, indi_tup, ans_index, next_start, clause_tup):
+    if combi_len == 0:  # Chuyển điều kiện kiểm tra này lên trước để tránh truy cập ngoài phạm vi
+        clause_tup.append(copy.copy(indi_tup))
+        return
+
+    for iter in range(next_start, input_len):  # Sửa lại điều kiện lặp để không bao gồm input_len + 1
+        if iter < len(input_array):  # Kiểm tra điều kiện này để đảm bảo không truy cập ngoài phạm vi
+            indi_tup[ans_index] = input_array[iter]
+            find_all_clauses(
+                input_array,
+                input_len,
+                combi_len - 1,
+                indi_tup,
+                ans_index + 1,
+                iter + 1,
+                clause_tup,
+            )
+
+
+
+def find_cell_no(i, j, row, col):
+    return i * col + j + 1
+
+
+def find_adjacent_cells(board, i, j, row, col):
+    output = []
+    if i >= 1 and j >= 1:
+        output.append(find_cell_no(i - 1, j - 1, row, col))
+    if i >= 1:
+        output.append(find_cell_no(i - 1, j, row, col))
+    if i >= 1 and j < (col - 1):
+        output.append(find_cell_no(i - 1, j + 1, row, col))
+    if j < (col - 1):
+        output.append(find_cell_no(i, j + 1, row, col))
+    if i < (row - 1) and j < (col - 1):
+        output.append(find_cell_no(i + 1, j + 1, row, col))
+    if i < (row - 1):
+        output.append(find_cell_no(i + 1, j, row, col))
+    if i < (row - 1) and j >= 1:
+        output.append(find_cell_no(i + 1, j - 1, row, col))
+    if j >= 1:
+        output.append(find_cell_no(i, j - 1, row, col))
+    for cell in output:
+        if board[(cell - 1) // col][(cell -1) % col] != -1:
+            output.remove(cell)
+    return output
+
+def generate_cnf(board, row, col):
+    cnf = CNF()
+    for i in range(row):
+        for j in range(col):
+            if board[i][j] != -1:
+                adj_cells = find_adjacent_cells(board, i, j, row, col)
+                count_adj = len(adj_cells)
+                indi_tup = [0] * (board[i][j] + 1)
+                first_tup = []
+                find_all_clauses(adj_cells, count_adj, board[i][j] + 1, indi_tup, 0, 0, first_tup)
+                for tups in first_tup:
+                    cnf.append([-x for x in tups])  # Negative clauses
+                indi_tup = [0] * (count_adj - board[i][j] + 1)
+                second_tup = []
+                find_all_clauses(adj_cells, count_adj, count_adj - board[i][j] + 1, indi_tup, 0, 0, second_tup)
+                for tups in second_tup:
+                    cnf.append(tups)  # Positive clauses
+    print(cnf)
+    return cnf
+
+
+
+def dpll(clauses, assignment):
+    if not clauses:
+        return True, assignment
+    if any(not clause for clause in clauses):
+        return False, None
+
+    # Unit propagation
     unit_clauses = [c for c in clauses if len(c) == 1]
     while unit_clauses:
         unit = unit_clauses.pop()
-        literal = unit[0]
-        assignment[abs(literal)] = literal > 0
-        clauses = [clause for clause in clauses if literal not in clause]
-        for i in range(len(clauses)):
-            clause = clauses[i]
-            if -literal in clause:
-                clause = [x for x in clause if x != -literal]
-                if not clause:
-                    return False, None  # Conflict found
-                clauses[i] = clause
+        var = unit[0]
+        if -var in assignment:
+            return False, None
+        assignment.add(var)
+        # Update clauses
+        clauses = [c for c in clauses if var not in c]
+        clauses = [[x for x in c if x != -var] for c in clauses]
         unit_clauses = [c for c in clauses if len(c) == 1]
 
-    # Check if all clauses are satisfied
-    if not clauses:
-        return True, assignment
-    
-    var_counter = count_var(grid)
-    # Select the first unassigned variable
-    for var in range(1, var_counter):
-        if var not in assignment:
-            break
 
-    # Recur with var set to True
-    sat, result = dpll(clauses + [[var]], assignment.copy())
-    if sat:
-        return sat, result
-
-    # Recur with var set to False
-    sat, result = dpll(clauses + [[-var]], assignment.copy())
-    if sat:
-        return sat, result
-
-    return False, None
-
-# Driver code
-if __name__ == '__main__':
-    file_name = input('Input grid name: ')
-    grid = read_grid('maps/' + file_name)
-
-    count_var(grid)  # Initialize logical variables dictionary
-
-    cnf_clauses = generate_cnf_clauses(grid)
-
-    sat, assignment = dpll(cnf_clauses)
-    if sat:
-        print("Solution found:", assignment)
-        # Translate the assignment back to the grid representation
-        solution_grid = []
-        for r in range(len(grid)):
-            row_solution = []
-            for c in range(len(grid[0])):
-                if grid[r][c] != '_':
-                    row_solution.append(grid[r][c])
-                else:
-                    var = logical_vars[(r, c)]
-                    row_solution.append('T' if assignment.get(var, False) else 'G')
-            solution_grid.append(row_solution)
-        print("Grid solution:")
-        for row in solution_grid:
-            print(row)
+    # Choose variable to assign
+    for clause in clauses:
+        for var in clause:
+            if var not in assignment and -var not in assignment:
+                break
+        else:
+            continue
+        break
     else:
-        print("No solution could be found.")
+        return True, assignment  # All variables assigned, solution found
+
+
+    # Try true assignment
+    solvable, new_assignment = dpll(clauses, assignment | {var})
+    if solvable:
+        return True, new_assignment
+
+    # Try false assignment
+    return dpll(clauses, assignment | {-var})
+
+def solve_cnf(board, row, col):
+    clauses = generate_cnf(board, row, col)  # Assume function to generate CNF from board
+    solvable, assignment = dpll(clauses, set())
+    if solvable:
+        for var in assignment:
+            if var > 0:
+                i, j = divmod(var - 1, col)
+                board[i][j] = 'T'
+            elif var < 0:
+                i, j = divmod(-var - 1, col)
+                board[i][j] = 'G'
+
+        print_board(board)
+    else:
+        print("No solution found")
+
+# Định nghĩa hàm print_board nếu cần
+def print_board(board):
+    for row in board:
+        print(' '.join(str(cell) for cell in row))
+
+filename = "input.txt"  # Change this to your file path
+board = read_input(filename)
+row = len(board)
+col = len(board[0])
+solve_cnf(board, row, col)
+
